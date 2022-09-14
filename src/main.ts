@@ -4,9 +4,9 @@ import { pullInputs, getOpenPRBranches, triggerWorkflow } from './utils';
 async function run() {
   console.log(`Starting Workflow Dispatch 🚀`);
   try {
-    const { token, workflow_filename, owner, repo } = pullInputs();
+    const { token, workflow_filename, owner, repo, baseRefName } = pullInputs();
 
-    const branches = await getOpenPRBranches({ repo, owner, token });
+    const branches = await getOpenPRBranches({ repo, owner, token, baseRefName });
 
     console.log('open pr branches', branches);
     await Promise.all(

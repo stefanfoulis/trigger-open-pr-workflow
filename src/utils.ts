@@ -3,7 +3,7 @@ import * as github from '@actions/github';
 import axios from 'axios';
 import { GraphQLClient, gql } from 'graphql-request';
 
-export const pullInputs = (): { token: string; workflow_filename: string; owner: string; repo: string } => {
+export const pullInputs = (): { token: string; workflow_filename: string; owner: string; repo: string, baseRefName: string } => {
   const inputs = {
     token: core.getInput('token'),
     workflow_filename: core.getInput('workflow_filename'),
@@ -11,15 +11,17 @@ export const pullInputs = (): { token: string; workflow_filename: string; owner:
 
   const owner = github.context.repo.owner.toLowerCase();
   const repo = github.context.repo.repo.toLowerCase();
+  const baseRefName = github.context.github.headRefName;
 
   return {
     ...inputs,
     owner,
     repo,
+    baseRefName,
   };
 };
 
-export const getOpenPRBranches = async (config: { repo: string; owner: string; token: string }): Promise<string[]> => {
+export const getOpenPRBranches = async (config: { repo: string; owner: string; token: string, baseRefName: string }): Promise<string[]> => {
   console.log(`query open PR branches for ${config.owner}/${config.repo}`);
 
   const endpoint = 'https://api.github.com/graphql';
@@ -32,7 +34,7 @@ export const getOpenPRBranches = async (config: { repo: string; owner: string; t
   const query = gql`
     query Query($repo: String!, $owner: String!) {
       repository(name: $repo, owner: $owner) {
-        pullRequests(first: 100, states: OPEN) {
+        pullRequests(first: 100, states: OPEN, baseRefName: $baseRefName) {
           nodes {
             headRefName
           }
@@ -41,7 +43,7 @@ export const getOpenPRBranches = async (config: { repo: string; owner: string; t
     }
   `;
 
-  const data = await graphQLClient.request(query, { repo: config.repo, owner: config.owner });
+  const data = await graphQLClient.request(query, { repo: config.repo, owner: config.owner, baseRefName: config.baseRefName });
   const arrOfHeadRef = data.repository.pullRequests.nodes;
   return arrOfHeadRef.map((pr: { headRefName: string }) => pr.headRefName);
 };
