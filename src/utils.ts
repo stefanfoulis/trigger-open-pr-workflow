@@ -11,7 +11,9 @@ export const pullInputs = (): { token: string; workflow_filename: string; owner:
 
   const owner = github.context.repo.owner.toLowerCase();
   const repo = github.context.repo.repo.toLowerCase();
-  const baseRefName = github.context.ref;
+  // ideally we'd get refName here directly... but looks like we have to build it ourselves.
+  const baseRefName = github.context.ref.replace('refs/heads/', '');
+  console.log(`extracted baseRefName ${baseRefName} from ref ${github.context.ref}`);
 
   return {
     ...inputs,
