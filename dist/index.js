@@ -17038,7 +17038,7 @@ const getOpenPRBranches = (config) => __awaiter(void 0, void 0, void 0, function
         },
     });
     const query = dist.gql `
-    query Query($repo: String!, $owner: String!) {
+    query Query($repo: String!, $owner: String!, $baseRefName: String!) {
       repository(name: $repo, owner: $owner) {
         pullRequests(first: 100, states: OPEN, baseRefName: $baseRefName) {
           nodes {

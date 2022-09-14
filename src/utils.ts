@@ -34,7 +34,7 @@ export const getOpenPRBranches = async (config: { repo: string; owner: string; t
   });
 
   const query = gql`
-    query Query($repo: String!, $owner: String!) {
+    query Query($repo: String!, $owner: String!, $baseRefName: String!) {
       repository(name: $repo, owner: $owner) {
         pullRequests(first: 100, states: OPEN, baseRefName: $baseRefName) {
           nodes {
