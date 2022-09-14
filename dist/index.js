@@ -17022,11 +17022,13 @@ const pullInputs = () => {
     };
     const owner = github.context.repo.owner.toLowerCase();
     const repo = github.context.repo.repo.toLowerCase();
+    const baseRefName = github.context.ref;
     return Object.assign(Object.assign({}, inputs), { owner,
-        repo });
+        repo,
+        baseRefName });
 };
 const getOpenPRBranches = (config) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`query open PR branches for ${config.owner}/${config.repo}`);
+    console.log(`query open PR branches for ${config.owner}/${config.repo} with base ${config.baseRefName}`);
     const endpoint = 'https://api.github.com/graphql';
     const graphQLClient = new dist.GraphQLClient(endpoint, {
         headers: {
@@ -17036,7 +17038,7 @@ const getOpenPRBranches = (config) => __awaiter(void 0, void 0, void 0, function
     const query = dist.gql `
     query Query($repo: String!, $owner: String!) {
       repository(name: $repo, owner: $owner) {
-        pullRequests(first: 100, states: OPEN) {
+        pullRequests(first: 100, states: OPEN, baseRefName: $baseRefName) {
           nodes {
             headRefName
           }
@@ -17044,7 +17046,7 @@ const getOpenPRBranches = (config) => __awaiter(void 0, void 0, void 0, function
       }
     }
   `;
-    const data = yield graphQLClient.request(query, { repo: config.repo, owner: config.owner });
+    const data = yield graphQLClient.request(query, { repo: config.repo, owner: config.owner, baseRefName: config.baseRefName });
     const arrOfHeadRef = data.repository.pullRequests.nodes;
     return arrOfHeadRef.map((pr) => pr.headRefName);
 });
@@ -17062,8 +17064,12 @@ const triggerWorkflow = (config) => __awaiter(void 0, void 0, void 0, function* 
     const res = yield restClient.post(`/repos/${owner}/${repo}/actions/workflows/${workflow_id}/dispatches`, {
         ref: config.ref,
     });
-    if (res.status === 204)
+    if (res.status === 204) {
         console.log(`trigger successfully for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+    }
+    else {
+        console.log(`trigger failed for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+    }
 });
 
 ;// CONCATENATED MODULE: ./src/main.ts
@@ -17082,8 +17088,8 @@ function run() {
     return main_awaiter(this, void 0, void 0, function* () {
         console.log(`Starting Workflow Dispatch 🚀`);
         try {
-            const { token, workflow_filename, owner, repo } = pullInputs();
-            const branches = yield getOpenPRBranches({ repo, owner, token });
+            const { token, workflow_filename, owner, repo, baseRefName } = pullInputs();
+            const branches = yield getOpenPRBranches({ repo, owner, token, baseRefName });
             console.log('open pr branches', branches);
             yield Promise.all(branches.map((branch_name) => triggerWorkflow({ owner, repo, token, workflow_filename, ref: branch_name })));
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

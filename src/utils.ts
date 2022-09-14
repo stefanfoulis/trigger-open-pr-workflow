@@ -11,7 +11,7 @@ export const pullInputs = (): { token: string; workflow_filename: string; owner:
 
   const owner = github.context.repo.owner.toLowerCase();
   const repo = github.context.repo.repo.toLowerCase();
-  const baseRefName = github.context.github.headRefName;
+  const baseRefName = github.context.ref;
 
   return {
     ...inputs,
