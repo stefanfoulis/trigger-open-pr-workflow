@@ -72,5 +72,9 @@ export const triggerWorkflow = async (config: {
     ref: config.ref,
   });
 
-  if (res.status === 204) console.log(`trigger successfully for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+  if (res.status === 204) {
+    console.log(`trigger successfully for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+  } else {
+    console.log(`trigger failed for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+  }
 };
