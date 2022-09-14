@@ -22,7 +22,7 @@ export const pullInputs = (): { token: string; workflow_filename: string; owner:
 };
 
 export const getOpenPRBranches = async (config: { repo: string; owner: string; token: string, baseRefName: string }): Promise<string[]> => {
-  console.log(`query open PR branches for ${config.owner}/${config.repo}`);
+  console.log(`query open PR branches for ${config.owner}/${config.repo} with base ${config.baseRefName}`);
 
   const endpoint = 'https://api.github.com/graphql';
   const graphQLClient = new GraphQLClient(endpoint, {
