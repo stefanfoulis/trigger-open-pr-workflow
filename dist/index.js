@@ -17029,8 +17029,8 @@ const pullInputs = () => {
         repo,
         baseRefName });
 };
-const getOpenPRBranches = (config) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`query open PR branches for ${config.owner}/${config.repo} with base ${config.baseRefName}`);
+const getOpenPRNumbers = (config) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(`query open PR numbers for ${config.owner}/${config.repo} with base ${config.baseRefName}`);
     const endpoint = 'https://api.github.com/graphql';
     const graphQLClient = new dist.GraphQLClient(endpoint, {
         headers: {
@@ -17042,15 +17042,16 @@ const getOpenPRBranches = (config) => __awaiter(void 0, void 0, void 0, function
       repository(name: $repo, owner: $owner) {
         pullRequests(first: 100, states: OPEN, baseRefName: $baseRefName) {
           nodes {
-            headRefName
+            number
           }
         }
       }
     }
   `;
     const data = yield graphQLClient.request(query, { repo: config.repo, owner: config.owner, baseRefName: config.baseRefName });
-    const arrOfHeadRef = data.repository.pullRequests.nodes;
-    return arrOfHeadRef.map((pr) => pr.headRefName);
+    const arrOfPR = data.repository.pullRequests.nodes;
+    // FIXME: skip PR with "Stale" label.
+    return arrOfPR.map((pr) => pr.number);
 });
 const triggerWorkflow = (config) => __awaiter(void 0, void 0, void 0, function* () {
     const restClient = axios_default().create({
@@ -17064,13 +17065,13 @@ const triggerWorkflow = (config) => __awaiter(void 0, void 0, void 0, function* 
     const repo = config.repo || 'external-workflow-trigger';
     const workflow_id = config.workflow_filename || 'pipeline.yml';
     const res = yield restClient.post(`/repos/${owner}/${repo}/actions/workflows/${workflow_id}/dispatches`, {
-        ref: config.ref,
+        pr_number: config.pr_number,
     });
     if (res.status === 204) {
-        console.log(`trigger successfully for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+        console.log(`trigger successfully for ${owner}/${repo}:${config.pr_number}:${workflow_id}`);
     }
     else {
-        console.log(`trigger failed for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+        console.log(`trigger failed for ${owner}/${repo}:${config.pr_number}:${workflow_id}`);
     }
 });
 
@@ -17091,9 +17092,9 @@ function run() {
         console.log(`Starting Workflow Dispatch 🚀`);
         try {
             const { token, workflow_filename, owner, repo, baseRefName } = pullInputs();
-            const branches = yield getOpenPRBranches({ repo, owner, token, baseRefName });
-            console.log('open pr branches', branches);
-            yield Promise.all(branches.map((branch_name) => triggerWorkflow({ owner, repo, token, workflow_filename, ref: branch_name })));
+            const pr_numbers = yield getOpenPRNumbers({ repo, owner, token, baseRefName });
+            console.log('open pr branches', pr_numbers);
+            yield Promise.all(pr_numbers.map((pr_number) => triggerWorkflow({ owner, repo, token, workflow_filename, pr_number: pr_number })));
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }
         catch (error) {

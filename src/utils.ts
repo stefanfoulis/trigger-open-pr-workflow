@@ -23,8 +23,8 @@ export const pullInputs = (): { token: string; workflow_filename: string; owner:
   };
 };
 
-export const getOpenPRBranches = async (config: { repo: string; owner: string; token: string, baseRefName: string }): Promise<string[]> => {
-  console.log(`query open PR branches for ${config.owner}/${config.repo} with base ${config.baseRefName}`);
+export const getOpenPRNumbers = async (config: { repo: string; owner: string; token: string, baseRefName: string }): Promise<string[]> => {
+  console.log(`query open PR numbers for ${config.owner}/${config.repo} with base ${config.baseRefName}`);
 
   const endpoint = 'https://api.github.com/graphql';
   const graphQLClient = new GraphQLClient(endpoint, {
@@ -38,7 +38,7 @@ export const getOpenPRBranches = async (config: { repo: string; owner: string; t
       repository(name: $repo, owner: $owner) {
         pullRequests(first: 100, states: OPEN, baseRefName: $baseRefName) {
           nodes {
-            headRefName
+            number
           }
         }
       }
@@ -46,8 +46,9 @@ export const getOpenPRBranches = async (config: { repo: string; owner: string; t
   `;
 
   const data = await graphQLClient.request(query, { repo: config.repo, owner: config.owner, baseRefName: config.baseRefName });
-  const arrOfHeadRef = data.repository.pullRequests.nodes;
-  return arrOfHeadRef.map((pr: { headRefName: string }) => pr.headRefName);
+  const arrOfPR = data.repository.pullRequests.nodes;
+  // FIXME: skip PR with "Stale" label.
+  return arrOfPR.map((pr: { number: string }) => pr.number);
 };
 
 export const triggerWorkflow = async (config: {
@@ -55,7 +56,7 @@ export const triggerWorkflow = async (config: {
   repo: string;
   workflow_filename: string;
   token: string;
-  ref: string;
+  pr_number: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }): Promise<void> => {
   const restClient = axios.create({
@@ -71,12 +72,12 @@ export const triggerWorkflow = async (config: {
   const workflow_id = config.workflow_filename || 'pipeline.yml';
 
   const res = await restClient.post(`/repos/${owner}/${repo}/actions/workflows/${workflow_id}/dispatches`, {
-    ref: config.ref,
+    pr_number: config.pr_number,
   });
 
   if (res.status === 204) {
-    console.log(`trigger successfully for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+    console.log(`trigger successfully for ${owner}/${repo}:${config.pr_number}:${workflow_id}`);
   } else {
-    console.log(`trigger failed for ${owner}/${repo}:${config.ref}:${workflow_id}`);
+    console.log(`trigger failed for ${owner}/${repo}:${config.pr_number}:${workflow_id}`);
   }
 };
